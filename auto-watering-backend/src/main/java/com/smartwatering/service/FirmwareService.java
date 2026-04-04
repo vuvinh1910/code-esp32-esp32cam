@@ -8,6 +8,9 @@ import com.smartwatering.exception.NotFoundException;
 import com.smartwatering.repository.OtaFirmwareRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 public class FirmwareService {
     private final OtaFirmwareRepository firmwareRepository;
@@ -33,6 +36,18 @@ public class FirmwareService {
 
     public FirmwareResponse findByVersion(String version) {
         return toResponse(firmwareRepository.findByVersion(version).orElseThrow(() -> new NotFoundException("Firmware not found")));
+    }
+
+    public List<FirmwareResponse> getAll() {
+        return firmwareRepository.findAll().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public void rollback(String version) {
+        // Find firmware to ensure it exists
+        firmwareRepository.findByVersion(version).orElseThrow(() -> new NotFoundException("Firmware not found"));
+        // Mock sending MQTT command to rollback devices
     }
 
     private FirmwareResponse toResponse(OtaFirmware f) {

@@ -1,0 +1,37 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: auto-watering-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/auto_watering
+    username: postgres
+    password: 123456
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+    open-in-view: false
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+app:
+  jwt:
+    secret: "8f92b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2"
+    expiration-minutes: 86400000
+  ai:
+    base-url: "http://localhost:8080"
+  ota:
+    default-bucket-prefix: "https://s3.amazonaws.com/your-bucket/"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

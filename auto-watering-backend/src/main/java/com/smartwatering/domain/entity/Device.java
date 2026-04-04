@@ -37,6 +37,8 @@ public class Device extends BaseEntity {
     @Column(nullable = false)
     private String currentFirmwareVersion = "v1.0.0";
 
+    private String location;
+
     private Instant lastSeenAt;
 
     public UUID getId() { return id; }
@@ -53,6 +55,8 @@ public class Device extends BaseEntity {
     public void setStatus(DeviceStatus status) { this.status = status; }
     public String getCurrentFirmwareVersion() { return currentFirmwareVersion; }
     public void setCurrentFirmwareVersion(String currentFirmwareVersion) { this.currentFirmwareVersion = currentFirmwareVersion; }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
     public Instant getLastSeenAt() { return lastSeenAt; }
     public void setLastSeenAt(Instant lastSeenAt) { this.lastSeenAt = lastSeenAt; }
 }

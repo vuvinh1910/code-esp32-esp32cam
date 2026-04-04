@@ -102,6 +102,23 @@ public class DeviceService {
     }
 
     private DeviceResponse toResponse(Device device) {
-        return new DeviceResponse(device.getId(), device.getUser() != null ? device.getUser().getId() : null, device.getMacAddress(), device.getName(), device.getDeviceType(), device.getStatus(), device.getCurrentFirmwareVersion(), device.getLastSeenAt());
+        DeviceResponse response = new DeviceResponse(
+                device.getId(),
+                device.getUser() != null ? device.getUser().getId() : null,
+                device.getMacAddress(),
+                device.getName(),
+                device.getDeviceType(),
+                device.getStatus(),
+                device.getCurrentFirmwareVersion(),
+                device.getLastSeenAt()
+        );
+
+        // Set frontend-compatible fields
+        response.setDeviceId(device.getMacAddress());
+        response.setLocation(device.getLocation());
+        response.setStatusString(device.getStatus() == DeviceStatus.ONLINE ? "active" : "inactive");
+        response.setCreatedAt(device.getCreatedAt() != null ? device.getCreatedAt().toString() : null);
+
+        return response;
     }
 }

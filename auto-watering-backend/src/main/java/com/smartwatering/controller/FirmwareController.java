@@ -8,6 +8,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/firmware")
 public class FirmwareController {
@@ -28,5 +30,16 @@ public class FirmwareController {
     @GetMapping("/{version}")
     public ResponseEntity<FirmwareResponse> byVersion(@PathVariable String version) {
         return ResponseEntity.ok(firmwareService.findByVersion(version));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<FirmwareResponse>> getAll() {
+        return ResponseEntity.ok(firmwareService.getAll());
+    }
+
+    @PostMapping("/{version}/rollback")
+    public ResponseEntity<Void> rollback(@PathVariable String version) {
+        firmwareService.rollback(version);
+        return ResponseEntity.ok().build();
     }
 }

@@ -16,7 +16,9 @@ import java.util.UUID;
 public class SensorController {
     private final SensorService sensorService;
 
-    public SensorController(SensorService sensorService) { this.sensorService = sensorService; }
+    public SensorController(SensorService sensorService) {
+        this.sensorService = sensorService;
+    }
 
     @PostMapping
     public ResponseEntity<SensorDataResponse> ingest(@Valid @RequestBody SensorDataRequest request) {
