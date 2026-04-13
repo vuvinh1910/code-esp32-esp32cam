@@ -1,34 +1,18 @@
-"""
-Tang so luong anh cho dataset tu bo anh goc.
-
-Muc tieu dung cho bai toan 3 class:
-- xuong_rong
-- nha_dam
-- bac_ha
-
-Cach dung:
-1) Bo anh goc vao:
-   dataset/
-     xuong_rong/
-     nha_dam/
-     bac_ha/
-2) Moi class toi thieu 10 anh goc (ban co the dung it hon, nhung 10 la nen co)
-3) Chay:
-   python augment_dataset.py --target-per-class 200
-"""
-
 import argparse
-import os
 import random
 from pathlib import Path
 
 from PIL import Image, ImageEnhance, ImageOps
 
-DATASET_DIR = Path("dataset")
-EXPECTED_CLASSES = ["xuong_rong", "nha_dam", "bac_ha"]
+# ===== CONFIG =====
+TRAIN_DIR = Path("dataset/train")   # bạn đã chia sẵn
+OUTPUT_DIR = TRAIN_DIR  # lưu ảnh tăng cường ngay trong thư mục gốc
+
+EXPECTED_CLASSES = ["xuong_rong", "nha_dam", "tia_to"]
 VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 
+# ===== UTILS =====
 def list_images(folder: Path):
     return [
         p for p in folder.iterdir()
@@ -40,107 +24,90 @@ def load_image(image_path: Path, img_size=(224, 224)):
     return Image.open(image_path).convert("RGB").resize(img_size)
 
 
+# ===== AUGMENT =====
 def random_augment(img: Image.Image) -> Image.Image:
-    # Rotation
-    angle = random.uniform(-25, 25)
-    img = img.rotate(angle, resample=Image.Resampling.BICUBIC, fillcolor=(0, 0, 0))
+    # Rotation nhẹ
+    angle = random.uniform(-15, 15)
+    img = img.rotate(angle, resample=Image.Resampling.BICUBIC)
 
-    # Random horizontal flip
+    # Flip ngang
     if random.random() < 0.5:
         img = ImageOps.mirror(img)
 
-    # Brightness and contrast jitter
-    brightness = random.uniform(0.75, 1.25)
-    contrast = random.uniform(0.8, 1.2)
+    # Brightness / contrast nhẹ
+    brightness = random.uniform(0.85, 1.15)
+    contrast = random.uniform(0.85, 1.15)
     img = ImageEnhance.Brightness(img).enhance(brightness)
     img = ImageEnhance.Contrast(img).enhance(contrast)
 
-    # Slight random crop then resize back
+    # Crop nhẹ
     w, h = img.size
-    crop_ratio = random.uniform(0.85, 1.0)
+    crop_ratio = random.uniform(0.9, 1.0)
     new_w = int(w * crop_ratio)
     new_h = int(h * crop_ratio)
     left = random.randint(0, w - new_w)
     top = random.randint(0, h - new_h)
-    img = img.crop((left, top, left + new_w, top + new_h)).resize((w, h), Image.Resampling.BICUBIC)
+    img = img.crop((left, top, left + new_w, top + new_h)).resize((w, h))
 
     return img
 
 
-def augment_class_folder(class_folder: Path, target_per_class: int, img_size=(224, 224)):
-    images = list_images(class_folder)
-    if len(images) == 0:
-        raise ValueError(f"Khong co anh trong thu muc: {class_folder}")
+# ===== COPY + AUGMENT =====
+def prepare_and_augment(target_per_class=200, img_size=(224, 224)):
+    print("Dang xu ly train dataset...")
 
-    if len(images) >= target_per_class:
-        print(f"[{class_folder.name}] Da co {len(images)} anh >= muc tieu {target_per_class}, bo qua.")
-        return
+    for class_name in EXPECTED_CLASSES:
+        src_folder = TRAIN_DIR / class_name
+        dst_folder = OUTPUT_DIR / class_name
 
-    to_generate = target_per_class - len(images)
-    print(f"[{class_folder.name}] Anh goc: {len(images)} | Can tao them: {to_generate}")
+        dst_folder.mkdir(parents=True, exist_ok=True)
 
-    generated = 0
-    source_idx = 0
+        images = list_images(src_folder)
 
-    # Tao luan phien tu anh goc cho den khi du so luong.
-    while generated < to_generate:
-        src_path = images[source_idx % len(images)]
-        source_idx += 1
+        print(f"{class_name}: {len(images)} anh goc")
 
-        img = load_image(src_path, img_size=img_size)
-        aug_img = random_augment(img)
-        out_name = f"aug_{src_path.stem}_{generated + 1:04d}.jpg"
-        aug_img.save(class_folder / out_name, format="JPEG", quality=92)
-        generated += 1
+        if not images:
+            print(f"{class_name}: bo qua vi khong co anh goc")
+            continue
 
-    total = len(list_images(class_folder))
-    print(f"[{class_folder.name}] Hoan tat. Tong so anh hien tai: {total}")
+        # Augment
+        to_generate = target_per_class - len(images)
+        if to_generate <= 0:
+            continue
 
+        print(f"{class_name}: tao them {to_generate} anh")
 
-def validate_structure():
-    if not DATASET_DIR.exists():
-        raise FileNotFoundError(
-            "Khong tim thay thu muc dataset/. Hay tao truoc roi bo anh vao."
-        )
+        generated = 0
+        idx = 0
 
-    missing = [c for c in EXPECTED_CLASSES if not (DATASET_DIR / c).exists()]
-    if missing:
-        raise FileNotFoundError(
-            "Thieu thu muc class: " + ", ".join(missing)
-        )
+        while generated < to_generate:
+            src = images[idx % len(images)]
+            idx += 1
+
+            img = load_image(src, img_size)
+            aug = random_augment(img)
+
+            out_name = f"aug_{src.stem}_{generated+1:04d}.jpg"
+            aug.save(dst_folder / out_name, quality=92)
+
+            generated += 1
 
 
+# ===== MAIN =====
 def main():
-    parser = argparse.ArgumentParser(description="Tang anh dataset bang augmentation")
-    parser.add_argument(
-        "--target-per-class",
-        type=int,
-        default=200,
-        help="Tong so anh mong muon cho moi class sau khi tang cuong",
-    )
-    parser.add_argument(
-        "--img-size",
-        type=int,
-        default=224,
-        help="Kich thuoc anh resize vuong, mac dinh 224",
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--target", type=int, default=200)
+    parser.add_argument("--img-size", type=int, default=224)
     args = parser.parse_args()
 
-    if args.target_per_class <= 0:
-        raise ValueError("target-per-class phai > 0")
+    prepare_and_augment(
+        target_per_class=args.target,
+        img_size=(args.img_size, args.img_size)
+    )
 
-    validate_structure()
-
-    print("Bat dau tang cuong dataset...")
-    for class_name in EXPECTED_CLASSES:
-        class_folder = DATASET_DIR / class_name
-        augment_class_folder(
-            class_folder=class_folder,
-            target_per_class=args.target_per_class,
-            img_size=(args.img_size, args.img_size),
-        )
-
-    print("Hoan tat tat ca class.")
+    print("\nHoan tat!")
+    print("-> Anh augment da duoc luu truc tiep trong 'dataset/train'")
+    print("-> Test giu nguyen folder dataset/test")
 
 
 if __name__ == "__main__":
