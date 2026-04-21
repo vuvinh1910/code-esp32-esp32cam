@@ -5,9 +5,10 @@ import {
 import {
   Card,
   Switch,
+  Button,
 } from '../components/ui';
 import { Header } from '../components/Layout/Header';
-import { dashboardAPI, deviceAPI, pumpAPI, sensorAPI } from '../api/client';
+import { aiAPI, dashboardAPI, deviceAPI, pumpAPI, sensorAPI } from '../api/client';
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 
@@ -26,6 +27,8 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);
+  const [recognizing, setRecognizing] = useState(false);
+  const [aiResult, setAiResult] = useState(null);
 
   const [chartData, setChartData] = useState([]);
   const [activities, setActivities] = useState([]);
@@ -36,6 +39,14 @@ export function Dashboard() {
   const formatMetric = (value, unit = '') => {
     if (value === null || value === undefined) return '--';
     return `${value}${unit}`;
+  };
+
+  const formatConfidence = (confidenceValue) => {
+    if (confidenceValue === null || confidenceValue === undefined) return '--';
+    const numericValue = Number(confidenceValue);
+    if (Number.isNaN(numericValue)) return '--';
+    const normalized = numericValue <= 1 ? numericValue * 100 : numericValue;
+    return `${normalized.toFixed(1)}%`;
   };
 
   async function fetchDashboardData(deviceId) {
@@ -135,6 +146,31 @@ export function Dashboard() {
     }
   }
 
+  async function handleAiRecognition() {
+    if (!selectedDevice?.id) {
+      toast.error('No device selected');
+      return;
+    }
+
+    const trimmedIp = (selectedDevice.espIpAddress || '').trim();
+    if (!trimmedIp) {
+      toast.error('Missing ESP32-CAM IP. Please update this device in Device Management.');
+      return;
+    }
+
+    try {
+      setRecognizing(true);
+      const response = await aiAPI.triggerRecognition(selectedDevice.id, trimmedIp);
+      setAiResult(response.data || null);
+      toast.success('Plant recognition completed');
+    } catch (error) {
+      console.error('AI recognition failed:', error);
+      toast.error(error.response?.data?.message || 'Failed to recognize plant from ESP32-CAM');
+    } finally {
+      setRecognizing(false);
+    }
+  }
+
   const handleDeviceChange = (event) => {
     const nextDeviceId = event.target.value;
     const nextDevice = devices.find((device) => device.id === nextDeviceId);
@@ -151,6 +187,7 @@ export function Dashboard() {
       airHumidity: null,
       lightLevel: null,
     });
+    setAiResult(null);
     setChartData([]);
     setActivities([]);
   };
@@ -219,7 +256,26 @@ export function Dashboard() {
               <h2 className="text-white text-5xl font-bold tracking-tight mb-3">{selectedDevice.name || 'IoT Device'}</h2>
               <div className="flex items-center text-gray-200 gap-2 font-medium">
                 <MapPin className="h-4 w-4" />
-                AI Detected: Unknown
+                AI Detected: {aiResult?.plant || 'Unknown'}
+              </div>
+              {aiResult && (
+                <div className="mt-2 text-sm text-gray-200/90">
+                  Confidence: {formatConfidence(aiResult.confidence)} • Below threshold: {aiResult.below_threshold ? 'Yes' : 'No'}
+                </div>
+              )}
+              <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center">
+                <div className="h-10 min-w-[240px] rounded-lg border border-white/30 bg-white/10 px-3 text-sm text-white/90 flex items-center">
+                  ESP32-CAM IP: {selectedDevice.espIpAddress || 'Not set'}
+                </div>
+                <Button
+                  type="button"
+                  variant="accent"
+                  onClick={handleAiRecognition}
+                  disabled={recognizing}
+                  className="h-10"
+                >
+                  {recognizing ? 'Recognizing...' : 'Recognize Plant'}
+                </Button>
               </div>
             </div>
             

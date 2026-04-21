@@ -85,6 +85,7 @@ public class DeviceService {
 
     private void applyRequest(Device device, DeviceRequest request) {
         device.setMacAddress(request.getMacAddress());
+        device.setEspIpAddress(request.getEspIpAddress());
         device.setName(request.getName());
         device.setDeviceType(request.getDeviceType());
         if (request.getUserId() != null) {
@@ -115,6 +116,7 @@ public class DeviceService {
 
         // Set frontend-compatible fields
         response.setDeviceId(device.getMacAddress());
+        response.setEspIpAddress(device.getEspIpAddress());
         response.setLocation(device.getLocation());
         response.setStatusString(device.getStatus() == DeviceStatus.ONLINE ? "active" : "inactive");
         response.setCreatedAt(device.getCreatedAt() != null ? device.getCreatedAt().toString() : null);

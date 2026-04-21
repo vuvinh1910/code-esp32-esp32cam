@@ -9,6 +9,7 @@ public class DeviceResponse {
     private UUID id;
     private UUID userId;
     private String macAddress;
+    private String espIpAddress;
     private String name;
     private DeviceType deviceType;
     private DeviceStatus status;
@@ -28,6 +29,8 @@ public class DeviceResponse {
     public UUID getId() { return id; }
     public UUID getUserId() { return userId; }
     public String getMacAddress() { return macAddress; }
+    public String getEspIpAddress() { return espIpAddress; }
+    public void setEspIpAddress(String espIpAddress) { this.espIpAddress = espIpAddress; }
     public String getName() { return name; }
     public DeviceType getDeviceType() { return deviceType; }
     public DeviceStatus getStatus() { return status; }

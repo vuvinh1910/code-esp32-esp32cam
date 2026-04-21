@@ -104,4 +104,12 @@ export const deviceAPI = {
   delete: (id) => apiClient.delete(`/api/devices/${id}`),
 };
 
+// ===== AI API =====
+export const aiAPI = {
+  triggerRecognition: (deviceId, espIpAddress) =>
+    apiClient.post('/api/ai/trigger', null, {
+      params: { deviceId, espIpAddress },
+    }),
+};
+
 export default apiClient;
