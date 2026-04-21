@@ -23,6 +23,8 @@ public class Device extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String macAddress;
 
+    private String espIpAddress;
+
     @Column(nullable = false)
     private String name;
 
@@ -47,6 +49,8 @@ public class Device extends BaseEntity {
     public void setUser(AppUser user) { this.user = user; }
     public String getMacAddress() { return macAddress; }
     public void setMacAddress(String macAddress) { this.macAddress = macAddress; }
+    public String getEspIpAddress() { return espIpAddress; }
+    public void setEspIpAddress(String espIpAddress) { this.espIpAddress = espIpAddress; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public DeviceType getDeviceType() { return deviceType; }

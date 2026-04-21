@@ -21,6 +21,7 @@ export function Devices() {
   const [formData, setFormData] = useState({
     name: '',
     macAddress: '',
+    espIpAddress: '',
     deviceType: 'CONTROL_NODE',
   });
 
@@ -46,6 +47,7 @@ export function Devices() {
       const uiData = {
         name: formData.name,
         macAddress: formData.macAddress,
+        espIpAddress: formData.espIpAddress,
         deviceType: formData.deviceType,
       };
       const userId = localStorage.getItem('userId');
@@ -74,6 +76,7 @@ export function Devices() {
     setFormData({
       name: device.name,
       macAddress: device.macAddress,
+      espIpAddress: device.espIpAddress || '',
       deviceType: device.deviceType,
     });
     setShowModal(true);
@@ -92,7 +95,7 @@ export function Devices() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', macAddress: '', deviceType: 'CONTROL_NODE' });
+    setFormData({ name: '', macAddress: '', espIpAddress: '', deviceType: 'CONTROL_NODE' });
     setEditingDevice(null);
   };
 
@@ -141,6 +144,9 @@ export function Devices() {
                 <div className="space-y-2 mb-4">
                   <p className="text-sm text-gray-600">
                     <strong>Type:</strong> {device.deviceType || 'N/A'}
+                  </p>
+                  <p className="text-sm text-gray-600 break-all">
+                    <strong>ESP IP:</strong> {device.espIpAddress || 'N/A'}
                   </p>
                   <p className="text-sm text-gray-600">
                     <strong>Added:</strong> {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleDateString() : 'N/A'}
@@ -210,6 +216,17 @@ export function Devices() {
                     onChange={handleChange}
                     placeholder="00:1B:44:11:3A:B7"
                     required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="espIpAddress">ESP32-CAM IP</Label>
+                  <Input
+                    id="espIpAddress"
+                    name="espIpAddress"
+                    value={formData.espIpAddress}
+                    onChange={handleChange}
+                    placeholder="192.168.1.10"
                   />
                 </div>
 

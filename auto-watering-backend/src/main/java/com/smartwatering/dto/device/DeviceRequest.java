@@ -8,6 +8,7 @@ import java.util.UUID;
 public class DeviceRequest {
     private UUID userId;
     @NotBlank private String macAddress;
+    private String espIpAddress;
     @NotBlank private String name;
     @NotNull private DeviceType deviceType;
 
@@ -15,6 +16,8 @@ public class DeviceRequest {
     public void setUserId(UUID userId) { this.userId = userId; }
     public String getMacAddress() { return macAddress; }
     public void setMacAddress(String macAddress) { this.macAddress = macAddress; }
+    public String getEspIpAddress() { return espIpAddress; }
+    public void setEspIpAddress(String espIpAddress) { this.espIpAddress = espIpAddress; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public DeviceType getDeviceType() { return deviceType; }
