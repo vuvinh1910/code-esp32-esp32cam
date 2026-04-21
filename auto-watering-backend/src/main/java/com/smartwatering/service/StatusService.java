@@ -39,7 +39,7 @@ public class StatusService {
                 : deviceRepository.findAll().stream().findFirst();
 
         if (deviceOpt.isEmpty()) {
-            return new StatusResponse(false, false, null, null, null, null, null);
+            return new StatusResponse(false, false, null, null, null, null, null, null, null);
         }
 
         Device device = deviceOpt.get();
@@ -54,14 +54,16 @@ public class StatusService {
 
         // Get watering config
         Optional<WateringConfig> configOpt = configRepository.findByDeviceId(device.getId());
-        boolean autoMode = configOpt.isPresent();
+        boolean autoMode = configOpt.map(config -> Boolean.TRUE.equals(config.getAutoMode())).orElse(false);
         Double humidityThreshold = configOpt.map(WateringConfig::getMinSoilMoisture).orElse(null);
+        Double maxHumidityThreshold = configOpt.map(WateringConfig::getMaxSoilMoisture).orElse(null);
 
         // Get current humidity from latest sensor data
         Double currentHumidity = null;
         Double airTemperature = null;
         Double airHumidity = null;
         Double lightLevel = null;
+        String waterLevel = null;
         Optional<SensorData> latestSensor = sensorDataRepository.findTopByDeviceIdOrderByRecordedAtDesc(device.getId());
         if (latestSensor.isPresent()) {
             SensorData data = latestSensor.get();
@@ -69,8 +71,9 @@ public class StatusService {
             airTemperature = data.getAirTemperature();
             airHumidity = data.getAirHumidity();
             lightLevel = data.getLightLevel();
+            waterLevel = data.getWaterLevel();
         }
 
-        return new StatusResponse(pumpStatus, autoMode, humidityThreshold, currentHumidity, airTemperature, airHumidity, lightLevel);
+        return new StatusResponse(pumpStatus, autoMode, humidityThreshold, maxHumidityThreshold, currentHumidity, airTemperature, airHumidity, lightLevel, waterLevel);
     }
 }

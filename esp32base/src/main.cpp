@@ -1,5 +1,5 @@
 // ===== PHẦN 1: CẤU HÌNH HỆ THỐNG =====
-#define BACKEND_URL          "http://10.166.45.17:8080"
+#define BACKEND_URL          "http://192.168.158.217:8080"
 #define DEVICE_ID            "esp32-pot-01"
 #define FIRMWARE_VERSION     2.0f
 #define SEND_INTERVAL        2000UL    // Gửi dữ liệu cảm biến mỗi 2 giây
@@ -29,8 +29,8 @@ DHT dht(DHT_PIN, DHT_TYPE);
 const int SOIL_DRY_THRESHOLD = 30; // Dưới 30% → đất khô
 
 // ===== PHẦN 4: CẤU HÌNH WIFI & OTA =====
-const char* ssid             = "vanhvanh";
-const char* password         = "vanh123123";
+const char* ssid             = "vingpro";
+const char* password         = "00000000";
 const char* version_json_url = "https://raw.githubusercontent.com/Vanh53/esp32-ota-firmware/main/version.json";
 
 // ===== PHẦN 5: BIẾN TRẠNG THÁI =====
@@ -41,7 +41,68 @@ unsigned long lastUpdateCheckTime = 0;
 bool pumpStatus       = false;
 bool autoMode         = false;
 bool waterAvailable   = true; // Trạng thái mực nước (đọc từ phao)
-int  humidityThreshold = 50;  // Ngưỡng nhận từ server
+int  humidityThreshold    = 30;  // Ngưỡng BẬT bơm (min) nhận từ server
+int  maxHumidityThreshold = 60;  // Ngưỡng TẮT bơm (max) nhận từ server
+
+// ĐÃ THÊM: Khai báo trước hàm (Forward Declaration) để tránh lỗi scope
+bool safeSetPump(bool turnOn);
+
+// Parse status payload safely and only update values when server actually provides them.
+void applyStatusPayload(const String& payload, bool verboseStatusLog, const char* sourceTag) {
+  // ĐÃ SỬA: Dùng JsonDocument thay cho StaticJsonDocument
+  JsonDocument doc; 
+  DeserializationError err = deserializeJson(doc, payload);
+  if (err) {
+    Serial.printf("[ERROR] Parse %s failed: %s (len=%u)\n",
+                  sourceTag,
+                  err.c_str(),
+                  (unsigned)payload.length());
+    return;
+  }
+
+  JsonVariantConst autoVar = doc["auto_mode"];
+  if (autoVar.isNull()) autoVar = doc["autoMode"];
+  if (!autoVar.isNull()) {
+    autoMode = autoVar.as<bool>();
+  }
+
+  JsonVariantConst thresholdVar = doc["humidity_threshold"];
+  if (thresholdVar.isNull()) thresholdVar = doc["humidityThreshold"];
+  if (!thresholdVar.isNull() && (thresholdVar.is<float>() || thresholdVar.is<double>() || thresholdVar.is<int>())) {
+    int nextThreshold = (int)thresholdVar.as<float>();
+    if (nextThreshold < 0) nextThreshold = 0;
+    if (nextThreshold > 100) nextThreshold = 100;
+    humidityThreshold = nextThreshold;
+  }
+
+  JsonVariantConst maxThresholdVar = doc["max_humidity_threshold"];
+  if (!maxThresholdVar.isNull() && (maxThresholdVar.is<float>() || maxThresholdVar.is<double>() || maxThresholdVar.is<int>())) {
+    int nextMax = (int)maxThresholdVar.as<float>();
+    if (nextMax < 0) nextMax = 0;
+    if (nextMax > 100) nextMax = 100;
+    maxHumidityThreshold = nextMax;
+  }
+
+  JsonVariantConst pumpVar = doc["pump_status"];
+  if (pumpVar.isNull()) pumpVar = doc["pumpStatus"];
+
+  if (!autoMode && !pumpVar.isNull()) {
+    bool oldPump = pumpStatus;
+    bool newPump = pumpVar.as<bool>();
+    bool executed = safeSetPump(newPump);
+    if (!verboseStatusLog && executed && newPump != oldPump) {
+      Serial.printf("[PUMP] Status changed (MANUAL) → %s\n", newPump ? "ON" : "OFF");
+    }
+  }
+
+  if (verboseStatusLog) {
+    Serial.printf("[STATUS] pump=%s auto=%s minThreshold=%d maxThreshold=%d\n",
+                  pumpStatus ? "ON" : "OFF",
+                  autoMode ? "ON" : "OFF",
+                  humidityThreshold,
+                  maxHumidityThreshold);
+  }
+}
 
 // ===== PHẦN 6: TIỆN ÍCH WIFI =====
 
@@ -78,7 +139,8 @@ bool safeSetPump(bool turnOn) {
 void sendSensorDataToServer(float humidity, float temperature, int soilPercentage) {
   if (!wifiConnected()) return;
 
-  StaticJsonDocument<160> doc;
+  // ĐÃ SỬA: Dùng JsonDocument thay cho StaticJsonDocument
+  JsonDocument doc; 
   doc["deviceId"]      = DEVICE_ID;
   doc["humidity"]      = humidity;
   doc["temperature"]   = temperature;
@@ -113,25 +175,7 @@ void fetchSystemStatus() {
   int code = http.GET();
   if (code == 200) {
     String payload = http.getString();
-
-    StaticJsonDocument<256> doc;
-    if (!deserializeJson(doc, payload)) {
-      autoMode          = doc["auto_mode"]           | false;
-      humidityThreshold = doc["humidity_threshold"]  | 50;
-
-      // Chỉ server điều khiển relay khi ở chế độ MANUAL
-      if (!autoMode) {
-        bool newPump = doc["pump_status"] | false;
-        safeSetPump(newPump); // Kiểm tra mực nước trước khi bật
-      }
-
-      Serial.printf("[STATUS] pump=%s auto=%s threshold=%d\n",
-                    pumpStatus ? "ON" : "OFF",
-                    autoMode   ? "ON" : "OFF",
-                    humidityThreshold);
-    } else {
-      Serial.println("[ERROR] Failed to parse /api/status JSON");
-    }
+    applyStatusPayload(payload, true, "/api/status");
   } else {
     Serial.printf("[HTTP] GET /api/status → %d\n", code);
   }
@@ -150,20 +194,7 @@ void checkPumpControl() {
   int code = http.GET();
   if (code == 200) {
     String payload = http.getString();
-
-    StaticJsonDocument<128> doc;
-    if (!deserializeJson(doc, payload)) {
-      autoMode          = doc["auto_mode"]          | false;
-      humidityThreshold = doc["humidity_threshold"]  | 50;
-
-      // Chỉ server điều khiển relay khi ở chế độ MANUAL
-      if (!autoMode) {
-        bool newPump = doc["pump_status"] | false;
-        bool executed = safeSetPump(newPump); // Kiểm tra mực nước trước khi bật
-        if (executed && newPump != pumpStatus)
-          Serial.printf("[PUMP] Status changed (MANUAL) → %s\n", newPump ? "ON" : "OFF");
-      }
-    }
+    applyStatusPayload(payload, false, "/api/pump-control");
   }
   http.end();
 }
@@ -248,7 +279,8 @@ void checkForUpdates() {
   String payload = http.getString();
   http.end();
 
-  StaticJsonDocument<256> doc;
+  // ĐÃ SỬA: Dùng JsonDocument thay cho StaticJsonDocument
+  JsonDocument doc; 
   if (deserializeJson(doc, payload)) {
     Serial.println("[OTA] Failed to parse version JSON");
     return;
@@ -304,11 +336,26 @@ void runSystemLogic() {
 
   // 5. Logic tự động nội bộ (chỉ khi có nước)
   if (autoMode) {
-    bool isDry = soilPercent < humidityThreshold;
-    bool ok = safeSetPump(isDry); // safeSetPump tự chặn nếu bồn cạn
-    if (ok) {
-      Serial.printf("  [AUTO] Soil %d%% vs threshold %d%% → Pump %s\n",
-                    soilPercent, humidityThreshold, isDry ? "ON" : "OFF");
+    bool shouldTurnOn  = soilPercent < humidityThreshold;    // Đất quá khô → BẬT bơm
+    bool shouldTurnOff = soilPercent >= maxHumidityThreshold; // Đất đủ ẩm  → TẮT bơm
+
+    if (shouldTurnOn) {
+      bool ok = safeSetPump(true);
+      if (ok) {
+        Serial.printf("  [AUTO] Soil %d%% < min %d%% → Pump ON\n",
+                      soilPercent, humidityThreshold);
+      }
+    } else if (shouldTurnOff) {
+      bool ok = safeSetPump(false);
+      if (ok) {
+        Serial.printf("  [AUTO] Soil %d%% >= max %d%% → Pump OFF\n",
+                      soilPercent, maxHumidityThreshold);
+      }
+    } else {
+      // Nằm trong khoảng [min, max) → giữ nguyên trạng thái (hysteresis)
+      Serial.printf("  [AUTO] Soil %d%% in [%d%%, %d%%) → Pump %s (hold)\n",
+                    soilPercent, humidityThreshold, maxHumidityThreshold,
+                    pumpStatus ? "ON" : "OFF");
     }
   } else {
     Serial.println("  [MANUAL] Pump controlled by server.");

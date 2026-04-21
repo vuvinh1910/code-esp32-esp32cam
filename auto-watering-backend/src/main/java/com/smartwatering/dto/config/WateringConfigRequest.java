@@ -8,6 +8,7 @@ public class WateringConfigRequest {
     @NotNull private Double minSoilMoisture;
     @NotNull private Double maxSoilMoisture;
     @NotNull private Boolean overrideByWeather;
+    @NotNull private Boolean autoMode;
 
     public UUID getDeviceId() { return deviceId; }
     public void setDeviceId(UUID deviceId) { this.deviceId = deviceId; }
@@ -17,4 +18,6 @@ public class WateringConfigRequest {
     public void setMaxSoilMoisture(Double maxSoilMoisture) { this.maxSoilMoisture = maxSoilMoisture; }
     public Boolean getOverrideByWeather() { return overrideByWeather; }
     public void setOverrideByWeather(Boolean overrideByWeather) { this.overrideByWeather = overrideByWeather; }
+    public Boolean getAutoMode() { return autoMode; }
+    public void setAutoMode(Boolean autoMode) { this.autoMode = autoMode; }
 }

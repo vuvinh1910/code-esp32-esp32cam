@@ -22,10 +22,14 @@ const topNavItems = [
   // { to: '/schedules', icon: Calendar, label: 'Schedules' },
   // { to: '/analytics', icon: BarChart2, label: 'Analytics' },
   { to: '/firmware', icon: Radio, label: 'Firmware Update' },
-  { to: '/users', icon: Users, label: 'Users' },
 ];
 
 export function Sidebar({ onLogout }) {
+  const isAdmin = localStorage.getItem('userRole') === 'ADMIN';
+  const navItems = isAdmin
+    ? [...topNavItems, { to: '/users', icon: Users, label: 'Users' }]
+    : topNavItems;
+
   return (
     <aside className="w-[280px] bg-primary text-white flex flex-col min-h-screen">
       {/* Logo */}
@@ -44,7 +48,7 @@ export function Sidebar({ onLogout }) {
       {/* Navigation */}
       <nav className="flex-1 px-4 overflow-y-auto">
         <ul className="space-y-1">
-          {topNavItems.map((item) => {
+          {navItems.map((item) => {
             const Icon = item.icon;
             return (
               <li key={item.to}>

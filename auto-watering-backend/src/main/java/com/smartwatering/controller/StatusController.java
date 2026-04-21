@@ -36,8 +36,8 @@ public class StatusController {
     }
 
     @GetMapping("/status")
-    public ResponseEntity<StatusResponse> getStatus(@RequestParam(required = false) UUID deviceId) {
-        return ResponseEntity.ok(statusService.getStatus(deviceId));
+    public ResponseEntity<StatusResponse> getStatus(@RequestParam(required = false) String deviceId) {
+        return ResponseEntity.ok(statusService.getStatus(resolveDeviceId(deviceId)));
     }
 
     /**
@@ -47,14 +47,22 @@ public class StatusController {
      */
     @GetMapping("/pump-control")
     public ResponseEntity<StatusResponse> pumpControl(@RequestParam(required = false) String deviceId) {
-        UUID resolvedId = null;
-        if (deviceId != null) {
-            resolvedId = deviceRepository.findByName(deviceId)
-                    .or(() -> deviceRepository.findByMacAddress(deviceId))
+        return ResponseEntity.ok(statusService.getStatus(resolveDeviceId(deviceId)));
+    }
+
+    private UUID resolveDeviceId(String rawDeviceId) {
+        if (rawDeviceId == null || rawDeviceId.isBlank()) {
+            return null;
+        }
+
+        try {
+            return UUID.fromString(rawDeviceId);
+        } catch (IllegalArgumentException ignored) {
+            return deviceRepository.findByName(rawDeviceId)
+                    .or(() -> deviceRepository.findByMacAddress(rawDeviceId))
                     .map(d -> d.getId())
                     .orElse(null);
         }
-        return ResponseEntity.ok(statusService.getStatus(resolvedId));
     }
 
     @GetMapping("/readings")

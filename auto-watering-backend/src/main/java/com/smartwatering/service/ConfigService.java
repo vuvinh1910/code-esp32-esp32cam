@@ -28,6 +28,7 @@ public class ConfigService {
         config.setMinSoilMoisture(request.getMinSoilMoisture());
         config.setMaxSoilMoisture(request.getMaxSoilMoisture());
         config.setOverrideByWeather(request.getOverrideByWeather());
+        config.setAutoMode(request.getAutoMode());
         config = configRepository.save(config);
         return toResponse(config);
     }
@@ -37,6 +38,13 @@ public class ConfigService {
     }
 
     private WateringConfigResponse toResponse(WateringConfig config) {
-        return new WateringConfigResponse(config.getId(), config.getDevice().getId(), config.getMinSoilMoisture(), config.getMaxSoilMoisture(), config.getOverrideByWeather());
+        return new WateringConfigResponse(
+                config.getId(),
+                config.getDevice().getId(),
+                config.getMinSoilMoisture(),
+                config.getMaxSoilMoisture(),
+                config.getOverrideByWeather(),
+                config.getAutoMode()
+        );
     }
 }

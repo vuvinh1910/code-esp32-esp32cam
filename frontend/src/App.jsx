@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Login } from './pages/Login';
+import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { WateringConfig } from './pages/WateringConfig';
 import { Devices } from './pages/Devices';
@@ -10,6 +11,8 @@ import { FirmwareUpdates } from './pages/FirmwareUpdates';
 
 const handleLogout = () => {
   localStorage.removeItem('token');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('userRole');
   window.location.href = '/login';
 };
 
@@ -30,12 +33,21 @@ const ProtectedRoute = ({ children }) => {
   );
 };
 
+const AdminRoute = ({ children }) => {
+  const role = localStorage.getItem('userRole');
+  if (role !== 'ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
+
 function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" richColors />
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route
           path="/dashboard"
           element={
@@ -64,7 +76,9 @@ function App() {
           path="/users"
           element={
             <ProtectedRoute>
-              <UserManagement />
+              <AdminRoute>
+                <UserManagement />
+              </AdminRoute>
             </ProtectedRoute>
           }
         />

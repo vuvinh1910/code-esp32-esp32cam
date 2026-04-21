@@ -34,6 +34,9 @@ export function Login() {
         if (response.data.userId) {
           localStorage.setItem('userId', response.data.userId);
         }
+        if (response.data.role) {
+          localStorage.setItem('userRole', response.data.role);
+        }
         
         setTimeout(() => {
           window.location.href = '/dashboard';
@@ -141,7 +144,16 @@ export function Login() {
       {/* Footer */}
       <div className="mt-12 text-center text-sm font-medium text-gray-500 z-10">
         <p>Protected by enterprise-grade encryption.</p>
-        <p>Need an account? Contact your Conservatory Administrator.</p>
+        <p>
+          Need an account?{' '}
+          <button
+            type="button"
+            onClick={() => navigate('/register')}
+            className="text-primary hover:underline"
+          >
+            Create one here
+          </button>
+        </p>
       </div>
     </div>
   );

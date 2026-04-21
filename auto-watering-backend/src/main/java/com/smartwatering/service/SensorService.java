@@ -52,6 +52,7 @@ public class SensorService {
         data.setAirTemperature(request.getAirTemperature());
         data.setAirHumidity(request.getAirHumidity());
         data.setLightLevel(null); // ESP32 does not send light level
+        data.setWaterLevel(request.getWaterLevel());
         data = sensorRepository.save(data);
 
         pumpService.autoEvaluate(device.getId(), request.getSoilMoisture());
@@ -66,7 +67,16 @@ public class SensorService {
     }
 
     private SensorDataResponse toResponse(SensorData data) {
-        return new SensorDataResponse(data.getId(), data.getDevice().getId(), data.getSoilMoisture(), data.getAirTemperature(), data.getAirHumidity(), data.getLightLevel(), data.getRecordedAt());
+        return new SensorDataResponse(
+                data.getId(),
+                data.getDevice().getId(),
+                data.getSoilMoisture(),
+                data.getAirTemperature(),
+                data.getAirHumidity(),
+                data.getLightLevel(),
+                data.getWaterLevel(),
+                data.getRecordedAt()
+        );
     }
 
     private Device autoRegisterDevice(String deviceName) {

@@ -13,22 +13,65 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts
 
 const DASHBOARD_DEVICE_KEY = 'dashboardSelectedDeviceId';
 
+const emptyStatus = {
+  pumpStatus: false,
+  autoMode: false,
+  humidityThreshold: null,
+  currentHumidity: null,
+  airTemperature: null,
+  airHumidity: null,
+  lightLevel: null,
+  waterLevel: null,
+};
+
+const normalizeStatus = (payload = {}) => ({
+  pumpStatus: payload.pumpStatus ?? payload.pump_status ?? false,
+  autoMode: payload.autoMode ?? payload.auto_mode ?? false,
+  humidityThreshold: payload.humidityThreshold ?? payload.humidity_threshold ?? null,
+  currentHumidity: payload.currentHumidity ?? payload.current_humidity ?? null,
+  airTemperature: payload.airTemperature ?? payload.air_temperature ?? null,
+  airHumidity: payload.airHumidity ?? payload.air_humidity ?? null,
+  lightLevel: payload.lightLevel ?? payload.light_level ?? null,
+  waterLevel: payload.waterLevel ?? payload.water_level ?? null,
+});
+
+const getWaterLevelMeta = (waterLevel) => {
+  const value = String(waterLevel || '').toUpperCase();
+  if (!value) {
+    return {
+      percent: 0,
+      label: '--',
+      barClass: 'bg-gray-300',
+      recommendation: 'Waiting for water-level telemetry',
+    };
+  }
+
+  if (value === 'LOW') {
+    return {
+      percent: 15,
+      label: 'LOW',
+      barClass: 'bg-red-500',
+      recommendation: 'Refill now to avoid dry-run',
+    };
+  }
+
+  return {
+    percent: 80,
+    label: value || 'OK',
+    barClass: 'bg-primary',
+    recommendation: 'Tank level is safe',
+  };
+};
+
 export function Dashboard() {
-  const [status, setStatus] = useState({
-    pumpStatus: false,
-    autoMode: false,
-    humidityThreshold: null,
-    currentHumidity: null,
-    airTemperature: null,
-    airHumidity: null,
-    lightLevel: null,
-  });
+  const [status, setStatus] = useState(emptyStatus);
   const [loading, setLoading] = useState(true);
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);
 
   const [chartData, setChartData] = useState([]);
   const [activities, setActivities] = useState([]);
+  const waterLevelMeta = getWaterLevelMeta(status.waterLevel);
   const healthScore = status.currentHumidity === null || status.currentHumidity === undefined
     ? '--'
     : `${Math.round(status.currentHumidity)}%`;
@@ -48,15 +91,20 @@ export function Dashboard() {
         pumpAPI.getHistory(deviceId)
       ]);
 
-      setStatus(statusRes.data || {});
-
-      const readings = readingsRes.data?.content || [];
-      const formattedChart = readings
+      const readings = Array.isArray(readingsRes.data?.content) ? readingsRes.data.content : [];
+      const sortedReadings = [...readings].sort((a, b) => new Date(a.recordedAt) - new Date(b.recordedAt));
+      const formattedChart = sortedReadings
         .map((reading) => ({
           time: new Date(reading.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          value: reading.soilMoisture
-        }))
-        .reverse();
+          value: Number(reading.soilMoisture ?? 0)
+        }));
+
+      const normalizedStatus = normalizeStatus(statusRes.data || {});
+      if (!normalizedStatus.waterLevel && sortedReadings.length > 0) {
+        normalizedStatus.waterLevel = sortedReadings[sortedReadings.length - 1]?.waterLevel || null;
+      }
+
+      setStatus(normalizedStatus);
       setChartData(formattedChart);
 
       setActivities(Array.isArray(pumpRes.data) ? pumpRes.data : []);
@@ -127,6 +175,11 @@ export function Dashboard() {
       return;
     }
 
+    if (status.autoMode) {
+      toast.error('Switch mode to Manual before controlling pump.');
+      return;
+    }
+
     try {
       await pumpAPI.control(selectedDevice.id, !status.pumpStatus ? 'TURN_ON' : 'TURN_OFF');
       fetchDashboardData(selectedDevice.id);
@@ -142,15 +195,7 @@ export function Dashboard() {
 
     localStorage.setItem(DASHBOARD_DEVICE_KEY, nextDevice.id);
     setSelectedDevice(nextDevice);
-    setStatus({
-      pumpStatus: false,
-      autoMode: false,
-      humidityThreshold: null,
-      currentHumidity: null,
-      airTemperature: null,
-      airHumidity: null,
-      lightLevel: null,
-    });
+    setStatus(emptyStatus);
     setChartData([]);
     setActivities([]);
   };
@@ -293,18 +338,25 @@ export function Dashboard() {
                 <p className="text-lg font-semibold tracking-wide">{activities[0]?.triggeredBy || '--'}</p>
               </div>
               <div>
-                <p className="text-white/50 text-xs font-bold tracking-widest uppercase mb-2">Running Timer</p>
-                <p className="text-lg font-semibold tracking-wide">--:--</p>
+                <p className="text-white/50 text-xs font-bold tracking-widest uppercase mb-2">Mode</p>
+                <p className="text-lg font-semibold tracking-wide">{status.autoMode ? 'AUTO' : 'MANUAL'}</p>
               </div>
               <div className="flex-1 flex items-center justify-end gap-4">
                 <span className="font-semibold">Current State: {status.pumpStatus ? <span className="text-status-success">ACTIVE</span> : <span className="text-white/50">IDLE</span>}</span>
                 <Switch
                   checked={status.pumpStatus}
                   onCheckedChange={handlePumpToggle}
+                  disabled={status.autoMode}
                   className={status.pumpStatus ? 'bg-status-success' : 'bg-white/20'}
                 />
               </div>
             </div>
+
+            <p className="mt-4 text-sm text-white/80">
+              {status.autoMode
+                ? `Auto mode is active. Pump is controlled by threshold ${formatMetric(status.humidityThreshold, '%')}.`
+                : 'Manual mode is active. You can toggle pump from this switch.'}
+            </p>
             
             {/* Background pure decorative circle */}
             <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-white/5 rounded-full pointer-events-none" />
@@ -316,13 +368,16 @@ export function Dashboard() {
             <h3 className="text-lg font-bold mb-6">Water Tank Status</h3>
             <div className="flex-1 flex flex-col items-center justify-center">
               <div className="w-24 h-40 bg-gray-100 rounded-t-3xl rounded-b-xl relative overflow-hidden border-4 border-gray-100 mb-4">
-                <div className="absolute bottom-0 left-0 right-0 bg-primary h-[60%] rounded-b-xl flex flex-col items-center justify-center text-white transition-all duration-1000">
-                  <span className="font-bold text-lg">60%</span>
-                  <span className="text-[10px] uppercase font-semibold tracking-wider opacity-80">Medium</span>
+                <div
+                  className={`absolute bottom-0 left-0 right-0 ${waterLevelMeta.barClass} rounded-b-xl flex flex-col items-center justify-center text-white transition-all duration-1000`}
+                  style={{ height: `${waterLevelMeta.percent}%` }}
+                >
+                  <span className="font-bold text-lg">{waterLevelMeta.percent}%</span>
+                  <span className="text-[10px] uppercase font-semibold tracking-wider opacity-80">{waterLevelMeta.label}</span>
                 </div>
               </div>
               <p className="text-xs text-gray-500 flex items-center gap-1 font-medium">
-                <RotateCcw className="h-3 w-3" /> Next refill recommended in 2 days
+                <RotateCcw className="h-3 w-3" /> {waterLevelMeta.recommendation}
               </p>
             </div>
           </Card>
@@ -340,33 +395,40 @@ export function Dashboard() {
             </div>
           </div>
           <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <XAxis 
-                  dataKey="time" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }} 
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                  ticks={[0, 50, 100]}
-                  tickFormatter={(val) => `${val}%`}
-                />
-                <Bar 
-                  dataKey="value" 
-                  radius={[6, 6, 6, 6]} 
-                  barSize={40}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.value > 80 ? '#0B271C' : entry.value > 60 ? '#8FA39A' : '#E5E7EB'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {chartData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-sm text-gray-500">
+                No sensor readings yet for this device.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                  <XAxis 
+                    dataKey="time" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#9CA3AF', fontSize: 12 }} 
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                    ticks={[0, 50, 100]}
+                    tickFormatter={(val) => `${val}%`}
+                  />
+                  <Bar 
+                    dataKey="value" 
+                    radius={[6, 6, 6, 6]} 
+                    barSize={40}
+                    minPointSize={3}
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.value > 80 ? '#0B271C' : entry.value > 60 ? '#8FA39A' : '#E5E7EB'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
 

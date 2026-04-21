@@ -5,9 +5,9 @@ spring:
   application:
     name: auto-watering-backend
   datasource:
-    url: jdbc:postgresql://localhost:5432/auto_watering
-    username: postgres
-    password: Hvanh2k4*
+    url: jdbc:mysql://localhost:3306/auto_watering?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
+    username: root
+    password: "19102004v" 
   jpa:
     hibernate:
       ddl-auto: update

@@ -42,6 +42,7 @@ public class PumpService {
     @Transactional
     public PumpActionResponse autoEvaluate(UUID deviceId, Double soilMoisture) {
         WateringConfig config = configRepository.findByDeviceId(deviceId).orElseThrow(() -> new NotFoundException("Config not found"));
+        if (!Boolean.TRUE.equals(config.getAutoMode())) return null;
         if (soilMoisture == null) return null;
         if (soilMoisture < config.getMinSoilMoisture()) {
             return createAction(deviceId, PumpAction.TURN_ON, TriggerSource.AUTO_SOIL);

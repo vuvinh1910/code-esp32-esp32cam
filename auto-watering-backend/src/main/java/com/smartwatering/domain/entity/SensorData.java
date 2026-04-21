@@ -18,6 +18,7 @@ public class SensorData {
     private Double airTemperature;
     private Double airHumidity;
     private Double lightLevel;
+    private String waterLevel;
 
     @Column(name = "recorded_at", nullable = false)
     private Instant recordedAt = Instant.now();
@@ -34,6 +35,8 @@ public class SensorData {
     public void setAirHumidity(Double airHumidity) { this.airHumidity = airHumidity; }
     public Double getLightLevel() { return lightLevel; }
     public void setLightLevel(Double lightLevel) { this.lightLevel = lightLevel; }
+    public String getWaterLevel() { return waterLevel; }
+    public void setWaterLevel(String waterLevel) { this.waterLevel = waterLevel; }
     public Instant getRecordedAt() { return recordedAt; }
     public void setRecordedAt(Instant recordedAt) { this.recordedAt = recordedAt; }
 }

@@ -12,6 +12,8 @@ import { Header } from '../components/Layout/Header';
 import { configAPI, deviceAPI } from '../api/client';
 import { toast } from 'sonner';
 
+const DASHBOARD_DEVICE_KEY = 'dashboardSelectedDeviceId';
+
 const SeasonButton = ({ title, desc, icon, active, onClick }) => (
   <button
     onClick={onClick}
@@ -40,42 +42,76 @@ export function WateringConfig() {
     overrideByWeather: true,
     season: 'summer',
   });
+  const [devices, setDevices] = useState([]);
   const [deviceId, setDeviceId] = useState(null);
   const [deviceName, setDeviceName] = useState('N/A');
   const [loading, setLoading] = useState(true);
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
 
+  const applyConfig = (payload = {}) => {
+    setConfig((prev) => ({
+      ...prev,
+      minSoilMoisture: payload.minSoilMoisture ?? prev.minSoilMoisture,
+      maxSoilMoisture: payload.maxSoilMoisture ?? prev.maxSoilMoisture,
+      overrideByWeather: payload.overrideByWeather ?? prev.overrideByWeather,
+      autoMode: payload.autoMode ?? prev.autoMode,
+    }));
+  };
+
+  const loadDeviceConfig = async (selectedDeviceId) => {
+    if (!selectedDeviceId) return;
+
+    setConfig((prev) => ({
+      ...prev,
+      autoMode: true,
+      minSoilMoisture: 24,
+      maxSoilMoisture: 68,
+      overrideByWeather: true,
+    }));
+
+    try {
+      const res = await configAPI.get(selectedDeviceId);
+      if (res.data) {
+        applyConfig(res.data);
+        setDeviceId(res.data.deviceId || selectedDeviceId);
+        setLastSyncedAt(new Date());
+      }
+    } catch (err) {
+      console.error('Failed to load watering config', err);
+      if (err?.response?.status === 404) {
+        setDeviceId(selectedDeviceId);
+        return;
+      }
+      toast.error('Failed to load watering config');
+    }
+  };
+
   useEffect(() => {
     const loadConfig = async () => {
       try {
         const deviceRes = await deviceAPI.getAll();
-        const devices = Array.isArray(deviceRes.data) ? deviceRes.data : [];
+        const availableDevices = Array.isArray(deviceRes.data) ? deviceRes.data : [];
+        setDevices(availableDevices);
 
-        if (!devices.length) {
+        if (!availableDevices.length) {
           setLoading(false);
           return;
         }
 
-        const firstDevice = devices[0];
-        setDeviceId(firstDevice.id);
-        setDeviceName(firstDevice.name || firstDevice.macAddress || firstDevice.id);
+        const savedDeviceId = localStorage.getItem(DASHBOARD_DEVICE_KEY);
+        const initialDevice =
+          availableDevices.find((device) => device.id === savedDeviceId) ||
+          availableDevices.find((device) => device.status === 'ONLINE') ||
+          availableDevices[0];
 
-        const res = await configAPI.get(firstDevice.id);
-        if (res.data) {
-          setConfig(prev => ({
-            ...prev,
-            minSoilMoisture: res.data.minSoilMoisture ?? prev.minSoilMoisture,
-            maxSoilMoisture: res.data.maxSoilMoisture ?? prev.maxSoilMoisture,
-            overrideByWeather: res.data.overrideByWeather ?? prev.overrideByWeather,
-          }));
-          setDeviceId(res.data.deviceId);
-          setLastSyncedAt(new Date());
-        }
+        setDeviceId(initialDevice.id);
+        setDeviceName(initialDevice.name || initialDevice.macAddress || initialDevice.id);
+        localStorage.setItem(DASHBOARD_DEVICE_KEY, initialDevice.id);
+
+        await loadDeviceConfig(initialDevice.id);
       } catch (err) {
         console.error('Failed to load watering config', err);
-        if (err?.response?.status !== 404) {
-          toast.error('Failed to load watering config');
-        }
+        toast.error('Failed to load watering config');
       } finally {
         setLoading(false);
       }
@@ -94,13 +130,24 @@ export function WateringConfig() {
         deviceId,
         minSoilMoisture: config.minSoilMoisture,
         maxSoilMoisture: config.maxSoilMoisture,
-        overrideByWeather: config.overrideByWeather
+        overrideByWeather: config.overrideByWeather,
+        autoMode: config.autoMode,
       });
       toast.success('Settings Applied successfully');
       setLastSyncedAt(new Date());
     } catch {
       toast.error('Failed to save configuration');
     }
+  };
+
+  const handleDeviceChange = async (nextDeviceId) => {
+    const nextDevice = devices.find((device) => device.id === nextDeviceId);
+    if (!nextDevice) return;
+
+    setDeviceId(nextDevice.id);
+    setDeviceName(nextDevice.name || nextDevice.macAddress || nextDevice.id);
+    localStorage.setItem(DASHBOARD_DEVICE_KEY, nextDevice.id);
+    await loadDeviceConfig(nextDevice.id);
   };
 
   const handleChange = (field, value) => {
@@ -130,7 +177,21 @@ export function WateringConfig() {
           <h1 className="text-3xl font-bold text-gray-900">Watering Config</h1>
           <p className="text-gray-500 text-sm font-medium mt-1">Device: {deviceName}</p>
         </div>
-      } />
+      }>
+        {devices.length > 0 && (
+          <select
+            value={deviceId || ''}
+            onChange={(e) => handleDeviceChange(e.target.value)}
+            className="h-10 min-w-[220px] rounded-xl border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            {devices.map((device) => (
+              <option key={device.id} value={device.id}>
+                {device.name || device.macAddress || device.id} ({device.status})
+              </option>
+            ))}
+          </select>
+        )}
+      </Header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         

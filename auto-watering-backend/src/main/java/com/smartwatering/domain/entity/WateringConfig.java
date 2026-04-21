@@ -26,6 +26,9 @@ public class WateringConfig extends BaseEntity {
     @Column(nullable = false)
     private Boolean overrideByWeather = Boolean.FALSE;
 
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private Boolean autoMode = Boolean.TRUE;
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
     public Device getDevice() { return device; }
@@ -36,4 +39,6 @@ public class WateringConfig extends BaseEntity {
     public void setMaxSoilMoisture(Double maxSoilMoisture) { this.maxSoilMoisture = maxSoilMoisture; }
     public Boolean getOverrideByWeather() { return overrideByWeather; }
     public void setOverrideByWeather(Boolean overrideByWeather) { this.overrideByWeather = overrideByWeather; }
+    public Boolean getAutoMode() { return autoMode; }
+    public void setAutoMode(Boolean autoMode) { this.autoMode = autoMode; }
 }
