@@ -1,12 +1,9 @@
 package com.smartwatering.controller;
 
-import com.smartwatering.dto.pump.PumpLogResponse;
-import com.smartwatering.dto.sensor.SensorDataResponse;
-import com.smartwatering.dto.status.StatusResponse;
-import com.smartwatering.repository.DeviceRepository;
-import com.smartwatering.service.PumpService;
-import com.smartwatering.service.SensorService;
-import com.smartwatering.service.StatusService;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,9 +11,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
+import com.smartwatering.dto.pump.PumpLogResponse;
+import com.smartwatering.dto.sensor.SensorDataResponse;
+import com.smartwatering.dto.status.StatusResponse;
+import com.smartwatering.repository.DeviceRepository;
+import com.smartwatering.service.PumpService;
+import com.smartwatering.service.SensorService;
+import com.smartwatering.service.StatusService;
 
 @RestController
 @RequestMapping("/api")
@@ -37,6 +38,23 @@ public class StatusController {
     @GetMapping("/status")
     public ResponseEntity<StatusResponse> getStatus(@RequestParam(required = false) UUID deviceId) {
         return ResponseEntity.ok(statusService.getStatus(deviceId));
+    }
+
+    /**
+     * GET /api/pump-control
+     * ESP32 polls every 1 second with optional deviceId string (e.g. "esp32-pot-01").
+     * Authorization: Bearer esp32
+     */
+    @GetMapping("/pump-control")
+    public ResponseEntity<StatusResponse> pumpControl(@RequestParam(required = false) String deviceId) {
+        UUID resolvedId = null;
+        if (deviceId != null) {
+            resolvedId = deviceRepository.findByName(deviceId)
+                    .or(() -> deviceRepository.findByMacAddress(deviceId))
+                    .map(d -> d.getId())
+                    .orElse(null);
+        }
+        return ResponseEntity.ok(statusService.getStatus(resolvedId));
     }
 
     @GetMapping("/readings")
