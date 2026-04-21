@@ -1,5 +1,6 @@
 // ===== PHẦN 1: CẤU HÌNH HỆ THỐNG =====
-#define BACKEND_URL          "http://10.126.170.17:5000"
+#define BACKEND_URL          "http://10.166.45.17:8080"
+#define DEVICE_ID            "esp32-pot-01"
 #define FIRMWARE_VERSION     2.0f
 #define SEND_INTERVAL        2000UL    // Gửi dữ liệu cảm biến mỗi 2 giây
 #define CHECK_PUMP_INTERVAL  1000UL     // Kiểm tra lệnh bơm mỗi 1 giây
@@ -77,7 +78,8 @@ bool safeSetPump(bool turnOn) {
 void sendSensorDataToServer(float humidity, float temperature, int soilPercentage) {
   if (!wifiConnected()) return;
 
-  StaticJsonDocument<128> doc;
+  StaticJsonDocument<160> doc;
+  doc["deviceId"]      = DEVICE_ID;
   doc["humidity"]      = humidity;
   doc["temperature"]   = temperature;
   doc["soil_moisture"] = soilPercentage;
@@ -87,7 +89,7 @@ void sendSensorDataToServer(float humidity, float temperature, int soilPercentag
   serializeJson(doc, jsonBody);
 
   HTTPClient http;
-  http.begin(String(BACKEND_URL) + "/api/sensor");
+  http.begin(String(BACKEND_URL) + "/api/sensors");
   http.addHeader("Content-Type", "application/json");
 
   int code = http.POST(jsonBody);
@@ -105,7 +107,7 @@ void fetchSystemStatus() {
   if (!wifiConnected()) return;
 
   HTTPClient http;
-  http.begin(String(BACKEND_URL) + "/api/status");
+  http.begin(String(BACKEND_URL) + "/api/status?deviceId=" + String(DEVICE_ID));
   http.addHeader("Authorization", "Bearer esp32");
 
   int code = http.GET();
@@ -142,7 +144,7 @@ void checkPumpControl() {
   if (!wifiConnected()) return;
 
   HTTPClient http;
-  http.begin(String(BACKEND_URL) + "/api/pump-control");
+  http.begin(String(BACKEND_URL) + "/api/pump-control?deviceId=" + String(DEVICE_ID));
   http.addHeader("Authorization", "Bearer esp32");
 
   int code = http.GET();

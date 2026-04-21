@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/auto_watering
     username: postgres
-    password: 123456
+    password: Hvanh2k4*
   jpa:
     hibernate:
       ddl-auto: update
@@ -25,6 +25,8 @@ app:
   jwt:
     secret: "8f92b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2"
     expiration-minutes: 86400000
+  device:
+    api-key: "my-secret-device-key"
   ai:
     base-url: "http://localhost:8080"
   ota:

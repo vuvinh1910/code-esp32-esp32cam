@@ -1,15 +1,32 @@
 package com.smartwatering.dto.status;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class StatusResponse {
+
+    @JsonProperty("pump_status")
     private boolean pumpStatus;
+
+    @JsonProperty("auto_mode")
     private boolean autoMode;
+
+    @JsonProperty("humidity_threshold")
     private Double humidityThreshold;
+
+    @JsonProperty("current_humidity")
     private Double currentHumidity;
+
+    @JsonProperty("air_temperature")
     private Double airTemperature;
+
+    @JsonProperty("air_humidity")
     private Double airHumidity;
+
+    @JsonProperty("light_level")
     private Double lightLevel;
 
-    public StatusResponse(boolean pumpStatus, boolean autoMode, Double humidityThreshold, Double currentHumidity, Double airTemperature, Double airHumidity, Double lightLevel) {
+    public StatusResponse(boolean pumpStatus, boolean autoMode, Double humidityThreshold,
+                          Double currentHumidity, Double airTemperature, Double airHumidity, Double lightLevel) {
         this.pumpStatus = pumpStatus;
         this.autoMode = autoMode;
         this.humidityThreshold = humidityThreshold;
