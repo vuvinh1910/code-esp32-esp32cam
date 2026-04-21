@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { 
+import {
   Droplets, Thermometer, MapPin, Wind, Sun, RotateCcw
 } from 'lucide-react';
 import {
@@ -232,15 +232,6 @@ export function Dashboard() {
     localStorage.setItem(DASHBOARD_DEVICE_KEY, nextDevice.id);
     setSelectedDevice(nextDevice);
     setStatus(emptyStatus);
-    setStatus({
-      pumpStatus: false,
-      autoMode: false,
-      humidityThreshold: null,
-      currentHumidity: null,
-      airTemperature: null,
-      airHumidity: null,
-      lightLevel: null,
-    });
     setAiResult(null);
     setChartData([]);
     setActivities([]);
@@ -285,15 +276,15 @@ export function Dashboard() {
       </Header>
 
       {/* Hero Section */}
-      <div 
+      <div
         className="w-full h-[280px] rounded-[32px] relative overflow-hidden shadow-soft flex"
       >
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url('/assets/rose_macro_background_1774840968878.png')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
-        
+
         <div className="relative z-10 p-10 flex flex-col justify-between w-full">
           <div className="flex items-center gap-3">
             <span className="bg-status-success text-white px-3 py-1 rounded-full text-xs font-bold tracking-wider flex items-center gap-2">
@@ -304,7 +295,7 @@ export function Dashboard() {
               Device ID: {selectedDevice.macAddress || selectedDevice.id}
             </span>
           </div>
-          
+
           <div className="flex items-end justify-between w-full">
             <div>
               <h2 className="text-white text-5xl font-bold tracking-tight mb-3">{selectedDevice.name || 'IoT Device'}</h2>
@@ -332,7 +323,7 @@ export function Dashboard() {
                 </Button>
               </div>
             </div>
-            
+
             <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-6 text-center shadow-2xl">
               <p className="text-white/80 text-xs font-bold tracking-widest uppercase mb-1">Health Score</p>
               <p className="text-white text-4xl font-bold">{healthScore}</p>
@@ -396,7 +387,7 @@ export function Dashboard() {
               <RotateCcw className="h-6 w-6 text-accent" />
               <h3 className="text-xl font-bold">Pump Control</h3>
             </div>
-            
+
             <div className="flex items-center gap-12">
               <div>
                 <p className="text-white/50 text-xs font-bold tracking-widest uppercase mb-2">Trigger Source</p>
@@ -422,7 +413,7 @@ export function Dashboard() {
                 ? `Auto mode is active. Pump is controlled by threshold ${formatMetric(status.humidityThreshold, '%')}.`
                 : 'Manual mode is active. You can toggle pump from this switch.'}
             </p>
-            
+
             {/* Background pure decorative circle */}
             <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-white/5 rounded-full pointer-events-none" />
           </Card>
@@ -467,23 +458,23 @@ export function Dashboard() {
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <XAxis 
-                    dataKey="time" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#9CA3AF', fontSize: 12 }} 
+                  <XAxis
+                    dataKey="time"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
                     dy={10}
                   />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
                     tick={{ fill: '#9CA3AF', fontSize: 12 }}
                     ticks={[0, 50, 100]}
                     tickFormatter={(val) => `${val}%`}
                   />
-                  <Bar 
-                    dataKey="value" 
-                    radius={[6, 6, 6, 6]} 
+                  <Bar
+                    dataKey="value"
+                    radius={[6, 6, 6, 6]}
                     barSize={40}
                     minPointSize={3}
                   >
