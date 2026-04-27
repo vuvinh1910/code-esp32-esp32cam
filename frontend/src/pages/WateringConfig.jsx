@@ -17,11 +17,10 @@ const DASHBOARD_DEVICE_KEY = 'dashboardSelectedDeviceId';
 const SeasonButton = ({ title, desc, icon, active, onClick }) => (
   <button
     onClick={onClick}
-    className={`relative w-full text-left p-4 rounded-xl mb-3 flex items-start gap-4 transition-all ${
-      active 
-        ? 'bg-primary text-white shadow-soft' 
-        : 'bg-gray-50 text-gray-900 border border-gray-100 hover:bg-gray-100'
-    }`}
+    className={`relative w-full text-left p-4 rounded-xl mb-3 flex items-start gap-4 transition-all ${active
+      ? 'bg-primary text-white shadow-soft'
+      : 'bg-gray-50 text-gray-900 border border-gray-100 hover:bg-gray-100'
+      }`}
   >
     <div className={`mt-1 p-2 rounded-full ${active ? 'bg-accent text-primary' : 'bg-white text-gray-400'}`}>
       {icon}
@@ -194,10 +193,10 @@ export function WateringConfig() {
       </Header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Main Controls (Left Column) */}
         <div className="lg:col-span-2 space-y-8">
-          
+
           <Card className="rounded-[28px] p-2">
             <CardHeader className="p-6">
               <div className="flex items-center justify-between">
@@ -211,74 +210,57 @@ export function WateringConfig() {
               </div>
             </CardHeader>
             <CardContent className="p-6 space-y-10">
-              
+
               <div className="space-y-4">
                 <div className="flex justify-between items-end">
                   <label className="font-bold text-gray-900 uppercase tracking-widest text-xs">MIN SOIL MOISTURE (TURN ON)</label>
-                  <div className="text-3xl font-bold">{config.minSoilMoisture}<span className="text-xl text-gray-400">%</span></div>
+                  <div className="text-3xl font-bold text-gray-500">{config.minSoilMoisture}<span className="text-xl text-gray-400">%</span></div>
                 </div>
                 <input
                   type="range"
                   min="0"
                   max="100"
                   value={config.minSoilMoisture}
-                  onChange={(e) => handleChange('minSoilMoisture', Number(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
+                  readOnly
+                  disabled
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-not-allowed accent-gray-400"
                 />
-                <p className="text-sm text-gray-500">Pump will activate when moisture drops below this point.</p>
+                <p className="text-sm text-gray-500">Pump will activate when moisture drops below this point. (Configured via AI Dashboard)</p>
               </div>
 
               <div className="space-y-4">
                 <div className="flex justify-between items-end">
                   <label className="font-bold text-gray-900 uppercase tracking-widest text-xs">MAX SOIL MOISTURE (TURN OFF)</label>
-                  <div className="text-3xl font-bold">{config.maxSoilMoisture}<span className="text-xl text-gray-400">%</span></div>
+                  <div className="text-3xl font-bold text-gray-500">{config.maxSoilMoisture}<span className="text-xl text-gray-400">%</span></div>
                 </div>
                 <input
                   type="range"
                   min="0"
                   max="100"
                   value={config.maxSoilMoisture}
-                  onChange={(e) => handleChange('maxSoilMoisture', Number(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
+                  readOnly
+                  disabled
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-not-allowed accent-gray-400"
                 />
-                <p className="text-sm text-gray-500">Pump will deactivate once saturation reaches this level.</p>
+                <p className="text-sm text-gray-500">Pump will deactivate once saturation reaches this level. (Configured via AI Dashboard)</p>
               </div>
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="rounded-[28px] p-6 flex flex-col justify-between h-full bg-[#f8fbfa] border-0 shadow-sm">
-              <div>
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-bold text-lg">Weather Override</h3>
-                  <Switch
-                    checked={config.overrideByWeather}
-                    onCheckedChange={(c) => handleChange('overrideByWeather', c)}
-                  />
-                </div>
-                <p className="text-sm text-gray-500 mb-6">Suspend watering if rain is forecasted in the next 6 hours.</p>
-              </div>
-              <div className="bg-white rounded-xl p-4 flex items-center gap-4 shadow-sm">
-                <div className="bg-orange-50 p-2 rounded-lg"><CloudRain className="h-5 w-5 text-orange-400" /></div>
-                <div>
-                  <p className="text-xs font-bold text-gray-400 tracking-wider uppercase">Forecast</p>
-                  <p className="text-sm font-bold text-gray-900">24°C • Chance of Rain 15%</p>
-                </div>
-              </div>
-            </Card>
+          <div className="grid grid-cols-1 gap-6">
 
             <Card className="rounded-[28px] p-6 flex flex-col justify-between h-full bg-[#f8fbfa] border-0 shadow-sm">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-bold text-lg">Operational Mode</h3>
                   <div className="bg-gray-200/60 p-1 rounded-lg flex text-sm font-semibold">
-                    <button 
+                    <button
                       className={`px-3 py-1 rounded-md transition-all ${config.autoMode ? 'bg-white shadow pointer-events-none' : 'text-gray-500 hover:text-gray-900'}`}
                       onClick={() => handleChange('autoMode', true)}
                     >
                       Auto
                     </button>
-                    <button 
+                    <button
                       className={`px-3 py-1 rounded-md transition-all ${!config.autoMode ? 'bg-white shadow pointer-events-none' : 'text-gray-500 hover:text-gray-900'}`}
                       onClick={() => handleChange('autoMode', false)}
                     >
@@ -303,34 +285,34 @@ export function WateringConfig() {
               <CardTitle className="text-xl">Seasonal Profile</CardTitle>
             </CardHeader>
             <CardContent className="px-6 pb-6 h-full flex flex-col">
-              
-              <SeasonButton 
-                title="Spring" 
-                desc="Moderate hydration (15-45%)" 
-                icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22S7 16 7 11a5 5 0 0 1 10 0c0 5-5 11-5 11Z"/><path d="M12 22V11"/></svg>}
-                active={config.season === 'spring'} 
-                onClick={() => handleChange('season', 'spring')} 
+
+              <SeasonButton
+                title="Spring"
+                desc="Moderate hydration (15-45%)"
+                icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22S7 16 7 11a5 5 0 0 1 10 0c0 5-5 11-5 11Z" /><path d="M12 22V11" /></svg>}
+                active={config.season === 'spring'}
+                onClick={() => handleChange('season', 'spring')}
               />
-              <SeasonButton 
-                title="Summer" 
-                desc="High frequency (25-70%)" 
-                icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>}
-                active={config.season === 'summer'} 
-                onClick={() => handleChange('season', 'summer')} 
+              <SeasonButton
+                title="Summer"
+                desc="High frequency (25-70%)"
+                icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" /></svg>}
+                active={config.season === 'summer'}
+                onClick={() => handleChange('season', 'summer')}
               />
-              <SeasonButton 
-                title="Autumn" 
-                desc="Reduction phase (20-50%)" 
-                icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m8 10 4-6 4 6"/><path d="m12 4v16"/><path d="m12 14-4-4"/><path d="m12 14 4-4"/></svg>}
-                active={config.season === 'autumn'} 
-                onClick={() => handleChange('season', 'autumn')} 
+              <SeasonButton
+                title="Autumn"
+                desc="Reduction phase (20-50%)"
+                icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m8 10 4-6 4 6" /><path d="m12 4v16" /><path d="m12 14-4-4" /><path d="m12 14 4-4" /></svg>}
+                active={config.season === 'autumn'}
+                onClick={() => handleChange('season', 'autumn')}
               />
-              <SeasonButton 
-                title="Winter" 
-                desc="Dormancy mode (10-30%)" 
-                icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m10 20-4-4 4-4"/><path d="M14 14v6"/><path d="m14 4-4 4 4 4"/><path d="M10 10V4"/></svg>}
-                active={config.season === 'winter'} 
-                onClick={() => handleChange('season', 'winter')} 
+              <SeasonButton
+                title="Winter"
+                desc="Dormancy mode (10-30%)"
+                icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m10 20-4-4 4-4" /><path d="M14 14v6" /><path d="m14 4-4 4 4 4" /><path d="M10 10V4" /></svg>}
+                active={config.season === 'winter'}
+                onClick={() => handleChange('season', 'winter')}
               />
 
               <div className="mt-auto border border-dashed border-gray-300 rounded-xl p-5 bg-gray-50/50">

@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/auto_watering?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
     username: root
-    password: "19102004v" 
+    password: "phanvanthuy2004"
   jpa:
     hibernate:
       ddl-auto: update

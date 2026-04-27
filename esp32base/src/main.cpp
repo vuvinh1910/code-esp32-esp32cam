@@ -1,5 +1,5 @@
 // ===== PHẦN 1: CẤU HÌNH HỆ THỐNG =====
-#define BACKEND_URL          "http://192.168.158.217:8080"
+#define BACKEND_URL          "http://172.20.10.3:8080"
 #define DEVICE_ID            "esp32-pot-01"
 #define FIRMWARE_VERSION     2.0f
 #define SEND_INTERVAL        2000UL    // Gửi dữ liệu cảm biến mỗi 2 giây
@@ -29,8 +29,8 @@ DHT dht(DHT_PIN, DHT_TYPE);
 const int SOIL_DRY_THRESHOLD = 30; // Dưới 30% → đất khô
 
 // ===== PHẦN 4: CẤU HÌNH WIFI & OTA =====
-const char* ssid             = "vingpro";
-const char* password         = "00000000";
+const char* ssid             = "Phan Thuỷ";
+const char* password         = "12345678";
 const char* version_json_url = "https://raw.githubusercontent.com/Vanh53/esp32-ota-firmware/main/version.json";
 
 // ===== PHẦN 5: BIẾN TRẠNG THÁI =====

@@ -8,7 +8,7 @@ import {
   Button,
 } from '../components/ui';
 import { Header } from '../components/Layout/Header';
-import { aiAPI, dashboardAPI, deviceAPI, pumpAPI, sensorAPI } from '../api/client';
+import { aiAPI, dashboardAPI, deviceAPI, pumpAPI, sensorAPI, configAPI } from '../api/client';
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 
@@ -64,6 +64,48 @@ const getWaterLevelMeta = (waterLevel) => {
   };
 };
 
+const plantTranslationMap = {
+  // Định dạng AI trả về thực tế
+  "xuong-rong": "Xương Rồng",
+  "xuong_rong": "Xương Rồng",
+  "nha-dam": "Nha Đam",
+  "nha_dam": "Nha Đam",
+  "tia-to": "Tía Tô",
+  "tia_to": "Tía Tô",
+
+  // Định dạng tiếng Anh (phòng hờ)
+  "ficus lyrata": "Bàng Singapore",
+  "monstera deliciosa": "Trầu bà Nam Mỹ",
+  "sansevieria": "Lưỡi Hổ",
+  "aloe vera": "Nha Đam",
+  "epipremnum aureum": "Trầu bà vàng",
+  "spathiphyllum": "Lan Ý",
+  "zamioculcas zamiifolia": "Kim Tiền",
+  "dracaena trifasciata": "Lưỡi Hổ",
+  "chlorophytum comosum": "Cỏ Lan Chi",
+  "cactus": "Xương Rồng",
+  "succulent": "Sen Đá",
+  "rose": "Hoa Hồng",
+  "orchid": "Hoa Lan",
+  "basil": "Húng Quế",
+  "mint": "Bạc Hà",
+  "fern": "Dương Xỉ",
+  "jade plant": "Cây Ngọc Bích",
+  "pothos": "Trầu Bà",
+  "spider plant": "Lan Chi",
+  "snake plant": "Lưỡi Hổ",
+};
+
+const translatePlantName = (englishName) => {
+  if (!englishName) return "Không xác định";
+  const lowerName = englishName.toLowerCase();
+  if (plantTranslationMap[lowerName]) return plantTranslationMap[lowerName];
+  for (const [key, value] of Object.entries(plantTranslationMap)) {
+    if (lowerName.includes(key)) return value;
+  }
+  return englishName;
+};
+
 export function Dashboard() {
   const [status, setStatus] = useState(emptyStatus);
   const [loading, setLoading] = useState(true);
@@ -71,6 +113,10 @@ export function Dashboard() {
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [recognizing, setRecognizing] = useState(false);
   const [aiResult, setAiResult] = useState(null);
+
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [configMinMoisture, setConfigMinMoisture] = useState(30);
+  const [configMaxMoisture, setConfigMaxMoisture] = useState(60);
 
   const [chartData, setChartData] = useState([]);
   const [activities, setActivities] = useState([]);
@@ -214,13 +260,36 @@ export function Dashboard() {
     try {
       setRecognizing(true);
       const response = await aiAPI.triggerRecognition(selectedDevice.id, trimmedIp);
-      setAiResult(response.data || null);
-      toast.success('Plant recognition completed');
+      const translatedName = translatePlantName(response.data?.plant);
+      setAiResult({ ...response.data, translated: translatedName });
+
+      setConfigMinMoisture(status.humidityThreshold || 30);
+      setConfigMaxMoisture(status.maxHumidityThreshold || 60);
+      setShowAiModal(true);
+
+      toast.success('Nhận diện cây thành công!');
     } catch (error) {
       console.error('AI recognition failed:', error);
       toast.error(error.response?.data?.message || 'Failed to recognize plant from ESP32-CAM');
     } finally {
       setRecognizing(false);
+    }
+  }
+
+  async function handleSaveAiConfig() {
+    try {
+      await configAPI.upsert({
+        deviceId: selectedDevice.id,
+        minSoilMoisture: configMinMoisture,
+        maxSoilMoisture: configMaxMoisture,
+        overrideByWeather: false,
+        autoMode: status.autoMode,
+      });
+      toast.success('Đã lưu cấu hình ngưỡng độ ẩm!');
+      setShowAiModal(false);
+      fetchDashboardData(selectedDevice.id);
+    } catch (error) {
+      toast.error('Lỗi khi lưu cấu hình độ ẩm');
     }
   }
 
@@ -299,19 +368,10 @@ export function Dashboard() {
           <div className="flex items-end justify-between w-full">
             <div>
               <h2 className="text-white text-5xl font-bold tracking-tight mb-3">{selectedDevice.name || 'IoT Device'}</h2>
-              <div className="flex items-center text-gray-200 gap-2 font-medium">
-                <MapPin className="h-4 w-4" />
-                AI Detected: {aiResult?.plant || 'Unknown'}
+              <div className="flex items-center text-gray-200 gap-2 font-medium text-lg bg-black/40 px-4 py-2 rounded-xl border border-white/10 shadow-inner w-fit backdrop-blur-sm">
+                <span className="text-white font-bold tracking-wide">{aiResult?.translated}</span>
               </div>
-              {aiResult && (
-                <div className="mt-2 text-sm text-gray-200/90">
-                  Confidence: {formatConfidence(aiResult.confidence)} • Below threshold: {aiResult.below_threshold ? 'Yes' : 'No'}
-                </div>
-              )}
               <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center">
-                <div className="h-10 min-w-[240px] rounded-lg border border-white/30 bg-white/10 px-3 text-sm text-white/90 flex items-center">
-                  ESP32-CAM IP: {selectedDevice.espIpAddress || 'Not set'}
-                </div>
                 <Button
                   type="button"
                   variant="accent"
@@ -523,6 +583,72 @@ export function Dashboard() {
           </div>
         </Card>
       </div>
+
+      {showAiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md rounded-[32px] p-8 shadow-2xl animate-in zoom-in-95 duration-200 border-0 bg-white">
+            <div className="text-center mb-8">
+              <div className="mx-auto w-16 h-16 bg-accent/20 text-primary rounded-full flex items-center justify-center mb-4">
+                <MapPin className="h-8 w-8" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Nhận Diện Thành Công</h2>
+              <p className="text-gray-500">
+                Hệ thống xác định cây của bạn là:
+                <br />
+                <span className="text-primary font-bold text-xl mt-2 block">{aiResult?.translated}</span>
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Ngưỡng bật bơm (Đất khô) - %</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={configMinMoisture}
+                    onChange={(e) => setConfigMinMoisture(Number(e.target.value))}
+                    className="w-full h-12 rounded-xl border-2 border-gray-200 bg-gray-50 px-4 font-bold text-gray-900 focus:border-primary focus:bg-white focus:outline-none focus:ring-0 transition-colors"
+                  />
+                  <Droplets className="absolute right-4 top-3.5 h-5 w-5 text-gray-400" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Ngưỡng tắt bơm (Đất đủ ẩm) - %</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={configMaxMoisture}
+                    onChange={(e) => setConfigMaxMoisture(Number(e.target.value))}
+                    className="w-full h-12 rounded-xl border-2 border-gray-200 bg-gray-50 px-4 font-bold text-gray-900 focus:border-primary focus:bg-white focus:outline-none focus:ring-0 transition-colors"
+                  />
+                  <Droplets className="absolute right-4 top-3.5 h-5 w-5 text-gray-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 mt-8">
+              <Button
+                variant="ghost"
+                className="flex-1 h-12 rounded-xl font-bold text-gray-600 hover:bg-gray-100"
+                onClick={() => setShowAiModal(false)}
+              >
+                Hủy
+              </Button>
+              <Button
+                className="flex-1 h-12 rounded-xl font-bold bg-primary hover:bg-primary-light shadow-md"
+                onClick={handleSaveAiConfig}
+              >
+                Lưu Thông Số
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
